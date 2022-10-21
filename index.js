@@ -2,16 +2,15 @@ import express from "express";
 import multer from "multer";
 import mongoose from "mongoose";
 
-import checkAuth from "./utils/checkAuth.js";
-
 import {
   registerValidation,
   loginValidation,
   postCreateValidation,
 } from "./validations.js";
-import { getMe, login, register } from "./controllers/UserController.js";
-import * as PostController from "./controllers/PostController.js";
-import handleValidationErrors from "./utils/handleValidationErrors.js";
+
+import { PostController, UserController } from "./controllers/index.js";
+
+import { checkAuth, handleValidationErrors } from "./utils/index.js";
 
 mongoose
   .connect(
@@ -40,14 +39,19 @@ const upload = multer({ storage });
 app.use(express.json());
 app.use("/uploads", express.static("uploads"));
 
-app.post("/auth/login", loginValidation, handleValidationErrors, login);
+app.post(
+  "/auth/login",
+  loginValidation,
+  handleValidationErrors,
+  UserController.login
+);
 app.post(
   "/auth/register",
   registerValidation,
   handleValidationErrors,
-  register
+  UserController.register
 );
-app.get("/auth/me", checkAuth, getMe);
+app.get("/auth/me", checkAuth, UserController.getMe);
 
 app.post("/upload", checkAuth, upload.single("image"), (req, res) => {
   res.json({
