@@ -7,33 +7,37 @@ export const register = async (req, res) => {
   try {
     const password = req.body.password;
     const salt = await bcrypt.genSalt(10);
-    const passwordHash = await bcrypt.hash(password, salt);
+    const hash = await bcrypt.hash(password, salt);
 
     const doc = new UserModel({
       email: req.body.email,
       fullName: req.body.fullName,
       avatarUrl: req.body.avatarUrl,
-      passwordHash,
+      passwordHash: hash,
     });
 
-    const user = doc.save();
+    const user = await doc.save();
 
     const token = jwt.sign(
       {
         _id: user._id,
       },
-      "secret",
-      { expiresIn: "30d" }
+      "secret123",
+      {
+        expiresIn: "30d",
+      }
     );
 
+    const { passwordHash, ...userData } = user._doc;
+
     res.json({
-      ...user._doc,
+      ...userData,
       token,
     });
-  } catch (error) {
-    console.log(error);
+  } catch (err) {
+    console.log(err);
     res.status(500).json({
-      message: "Failed to register",
+      message: "Не удалось зарегистрироваться",
     });
   }
 };
@@ -44,18 +48,18 @@ export const login = async (req, res) => {
 
     if (!user) {
       return res.status(404).json({
-        message: "User not found",
+        message: "Пользователь не найден",
       });
     }
 
-    const isValidPassword = await bcrypt.compare(
+    const isValidPass = await bcrypt.compare(
       req.body.password,
       user._doc.passwordHash
     );
 
-    if (!isValidPassword) {
+    if (!isValidPass) {
       return res.status(400).json({
-        message: "Wrong login or password",
+        message: "Неверный логин или пароль",
       });
     }
 
@@ -63,18 +67,22 @@ export const login = async (req, res) => {
       {
         _id: user._id,
       },
-      "secret",
-      { expiresIn: "30d" }
+      "secret123",
+      {
+        expiresIn: "30d",
+      }
     );
 
+    const { passwordHash, ...userData } = user._doc;
+
     res.json({
-      ...user._doc,
+      ...userData,
       token,
     });
-  } catch (error) {
-    console.log(error);
+  } catch (err) {
+    console.log(err);
     res.status(500).json({
-      message: "Failed to login",
+      message: "Не удалось авторизоваться",
     });
   }
 };
@@ -85,15 +93,17 @@ export const getMe = async (req, res) => {
 
     if (!user) {
       return res.status(404).json({
-        message: "User not found",
+        message: "Пользователь не найден",
       });
     }
 
-    res.json({ ...user._doc });
-  } catch (error) {
-    console.log(error);
+    const { passwordHash, ...userData } = user._doc;
+
+    res.json(userData);
+  } catch (err) {
+    console.log(err);
     res.status(500).json({
-      message: "Failed to register",
+      message: "Нет доступа",
     });
   }
 };
